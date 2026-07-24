@@ -23,6 +23,18 @@ npm run build
 
 The resulting `dist/index.html` contains the code, styles, map, and department data.
 
+## GitHub Pages
+
+The workflow in `.github/workflows/deploy-pages.yml` builds and publishes the game whenever the `main` branch is pushed.
+
+After pushing the repository to GitHub:
+
+1. Open **Settings → Pages**.
+2. Under **Build and deployment**, select **GitHub Actions** as the source.
+3. Push to `main`, or manually run **Deploy to GitHub Pages** from the Actions tab.
+
+The deployment URL is shown in the completed workflow and on the repository's Pages settings screen.
+
 ## Rules
 
 - Select Chef-lieu or Map mode for the whole game.

@@ -11,7 +11,7 @@ const departments = rawDepartments as DepartmentCollection;
 const byCode = new Map(departments.features.map((feature) => [feature.properties.code, feature]));
 const capitals = [...new Set(departments.features.map((feature) => feature.properties.capital))].sort((a, b) => a.localeCompare(b, 'fr'));
 
-type Phase = 'setup' | 'question' | 'result' | 'bonus-intro' | 'round-end' | 'game-end';
+type Phase = 'setup' | 'round-intro' | 'question' | 'result' | 'bonus-intro' | 'round-end' | 'game-end';
 
 function distanceBetween(codeA: string, codeB: string): number {
   const [lon1, lat1] = geoCentroid(byCode.get(codeA)!);
@@ -57,7 +57,7 @@ export default function App() {
   const currentDepartment = currentQuestion ? byCode.get(currentQuestion.departmentCode)! : null;
   const currentPlayer = currentQuestion ? players.find((player) => player.id === currentQuestion.playerId)! : null;
   const usedCodes = useMemo(
-    () => schedule.slice(0, questionIndex + (phase === 'question' || phase === 'bonus-intro' ? 0 : 1)).map((question) => question.departmentCode),
+    () => schedule.slice(0, questionIndex + (phase === 'question' || phase === 'round-intro' || phase === 'bonus-intro' ? 0 : 1)).map((question) => question.departmentCode),
     [schedule, questionIndex, phase],
   );
 
@@ -78,7 +78,7 @@ export default function App() {
     setQuestionIndex(0);
     setResult(null);
     setRoundLoserId(null);
-    setPhase('question');
+    setPhase('round-intro');
   }
 
   function answer(correct: boolean, details: Partial<AnswerResult>) {
@@ -157,7 +157,7 @@ export default function App() {
     setQuestionIndex((index) => index + 1);
     setRoundLoserId(null);
     setResult(null);
-    setPhase('question');
+    setPhase('round-intro');
   }
 
   function resetGame() {
@@ -227,6 +227,27 @@ export default function App() {
     );
   }
 
+  if (phase === 'round-intro') {
+    const standings = [...players].sort((a, b) => b.totalScore - a.totalScore || a.name.localeCompare(b.name));
+    const topScore = standings[0]?.totalScore ?? 0;
+    const leaders = standings.filter((player) => player.totalScore === topScore);
+    return (
+      <main className="app centered-screen round-intro-screen">
+        <p className="eyebrow">Round {currentQuestion.round + 1} of {rounds}</p>
+        <h1>{currentQuestion.round === 0 ? 'Ready to explore?' : leaders.length === 1 ? `${leaders[0].name} is leading` : 'The lead is tied'}</h1>
+        <section className="standings-card panel">
+          <h2>Current standings</h2>
+          {standings.map((player, index) => (
+            <div className={`standing-row ${index === 0 && leaders.length === 1 ? 'leader' : ''}`} key={player.id}>
+              <span>{index + 1}</span><b>{player.name}</b><strong>{player.totalScore} pts</strong>
+            </div>
+          ))}
+        </section>
+        <button className="primary" onClick={() => setPhase('question')}>Start round {currentQuestion.round + 1} →</button>
+      </main>
+    );
+  }
+
   if (phase === 'bonus-intro') {
     return (
       <main className="app centered-screen bonus-screen">
@@ -240,7 +261,7 @@ export default function App() {
   }
 
   if (phase === 'round-end') {
-    const ranking = [...players].sort((a, b) => b.roundScore - a.roundScore || b.totalScore - a.totalScore);
+    const ranking = [...players].sort((a, b) => b.totalScore - a.totalScore || b.roundScore - a.roundScore);
     const isFinalRound = questionIndex === schedule.length - 1;
     return (
       <main className="app results-page">
@@ -250,8 +271,8 @@ export default function App() {
             {ranking.map((player, index) => (
               <article className={`rank-row ${index === 0 ? 'winner' : ''} ${player.id === roundLoserId ? 'loser' : ''}`} key={player.id}>
                 <strong>{index + 1}</strong>
-                <div><h3>{player.name}</h3><small>{roundTitle(player, index, ranking.length)}</small></div>
-                <b>{player.roundScore} pts</b>
+                <div><h3>{player.name}</h3><small>+{player.roundScore} this round · {roundTitle(player, index, ranking.length)}</small></div>
+                <b>{player.totalScore} pts</b>
               </article>
             ))}
             {roundLoserId ? (
@@ -274,7 +295,7 @@ export default function App() {
     const ranking = [...players].sort((a, b) => b.totalScore - a.totalScore || a.drinks - b.drinks);
     return (
       <main className="app results-page final-page">
-        <header><p className="eyebrow">Final results</p><h1>Vive la géographie!</h1></header>
+        <header><p className="eyebrow">The big winner</p><h1>👑 {ranking[0]?.name}</h1><p>Vive la géographie!</p></header>
         <section className="final-podium panel">
           {ranking.map((player, index) => (
             <article key={player.id} className={index === 0 ? 'champion' : ''}>
@@ -290,22 +311,24 @@ export default function App() {
   }
 
   const activeStreakMessage = currentPlayer ? streakMessage(currentPlayer.streak) : null;
+  const leadingScore = Math.max(...players.map((player) => player.totalScore));
   return (
     <main className="app game-page">
       <header className="game-header">
         <div><span className="logo">Chefs-Lieux</span><small>Round {currentQuestion.round + 1} / {rounds}</small></div>
-        <div className="turn-order">
-          {players.map((player) => <span key={player.id} className={player.id === currentPlayer!.id ? 'active' : ''}>{player.name}</span>)}
+        <div className="turn-order score-board">
+          {players.map((player) => (
+            <span key={player.id} className={`${player.id === currentPlayer!.id ? 'active' : ''} ${player.totalScore === leadingScore && leadingScore > 0 ? 'leading' : ''}`}>
+              {player.totalScore === leadingScore && leadingScore > 0 ? '♛ ' : ''}{player.name} · <b>{player.totalScore} pts</b>
+            </span>
+          ))}
         </div>
-        <span className="scores-hidden">Scores sealed 🔒</span>
       </header>
 
       <div className="game-layout">
-        <section className="question-panel">
-          <div className="turn-label">{currentQuestion.bonus ? 'BONUS · DOUBLE POINTS' : `QUESTION ${questionIndex + 1}`} · {currentPlayer!.name}'s turn</div>
+        <section className={`question-panel ${mode === 'capital' ? 'capital-question' : 'map-question'}`}>
           {mode === 'capital' ? (
-            <>
-              <h1>What is the chef-lieu of<br /><span>{currentDepartment!.properties.name}</span>?</h1>
+            <div className="capital-play-layout">
               <div className="map-wrap capital-map">
                 <FranceMap
                   departments={departments}
@@ -314,13 +337,18 @@ export default function App() {
                 />
                 <div className="department-tag"><b>{currentDepartment!.properties.code}</b>{currentDepartment!.properties.name}</div>
               </div>
-              {phase === 'question' && <CapitalPicker key={currentQuestion.departmentCode} capitals={capitals} onChoose={chooseCapital} />}
-            </>
+              <div className="capital-answer-column">
+                <div className="turn-label">{currentQuestion.bonus ? 'BONUS · DOUBLE POINTS' : `QUESTION ${questionIndex + 1}`} · {currentPlayer!.name}'s turn</div>
+                <h1>What is the chef-lieu of<br /><span>{currentDepartment!.properties.name}</span>?</h1>
+                {phase === 'question' && <CapitalPicker key={currentQuestion.departmentCode} capitals={capitals} onChoose={chooseCapital} />}
+              </div>
+            </div>
           ) : (
             <>
-              <h1>Where is<br /><span>{currentDepartment!.properties.name}</span>?</h1>
+              <div className="turn-label">{currentQuestion.bonus ? 'BONUS · DOUBLE POINTS' : `QUESTION ${questionIndex + 1}`} · {currentPlayer!.name}'s turn</div>
+              <h1>Where is <span>{currentDepartment!.properties.name}</span>?</h1>
               <p className="map-instruction">Your first click is final.</p>
-              <div className="map-wrap">
+              <div className="map-wrap pick-map">
                 <FranceMap
                   departments={departments}
                   interactive
@@ -335,11 +363,25 @@ export default function App() {
         </section>
 
         {phase === 'result' && result && (
-          <aside className={`result-card ${result.correct ? 'success' : 'failure'}`}>
+          <aside className={`result-card ${result.correct ? 'success' : 'failure'}`} role="dialog" aria-live="assertive">
             <div className="result-icon">{result.correct ? '✓' : '×'}</div>
-            <p className="eyebrow">{result.correct ? 'Correct' : 'Not this time'}</p>
-            <h2>{result.correct ? `+${result.points} point${result.points > 1 ? 's' : ''}` : 'Drink!'}</h2>
-            {!result.correct && <p className="drink-message">{drinkMessage}</p>}
+            <h2>{result.correct ? 'CORRECT!' : 'DRINK!'}</h2>
+            {result.correct ? (
+              <p className="points-earned">+{result.points} point{result.points > 1 ? 's' : ''}</p>
+            ) : (
+              <p className="drink-message">{drinkMessage}</p>
+            )}
+            {mode === 'map' && (
+              <div className="result-answer-map">
+                <FranceMap
+                  departments={departments}
+                  interactive
+                  targetCode={currentQuestion.departmentCode}
+                  chosenCode={result.chosenCode}
+                  reveal
+                />
+              </div>
+            )}
             <dl>
               {mode === 'capital' && <><dt>Correct answer</dt><dd>{currentDepartment!.properties.capital}</dd>{result.chosenCapital && <><dt>Your answer</dt><dd>{result.chosenCapital}</dd></>}</>}
               {mode === 'map' && !result.correct && <><dt>Distance</dt><dd>{result.distanceKm} km · {distanceComment(result.distanceKm)}</dd></>}

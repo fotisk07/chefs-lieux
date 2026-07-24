@@ -2,9 +2,11 @@ import { useMemo, useState } from 'react';
 import { geoCentroid } from 'd3-geo';
 import rawDepartments from './data/departments.json';
 import CapitalPicker from './components/CapitalPicker';
+import Confetti from './components/Confetti';
 import FranceMap from './components/FranceMap';
 import { buildSchedule, normalize, randomDrinkMessage, streakMessage } from './game/game';
 import { playCorrect, playDrink } from './game/sounds';
+import { triviaFor } from './data/trivia';
 import type { AnswerResult, DepartmentCollection, GameMode, Player, ScheduledQuestion } from './types';
 
 const departments = rawDepartments as DepartmentCollection;
@@ -295,6 +297,7 @@ export default function App() {
     const ranking = [...players].sort((a, b) => b.totalScore - a.totalScore || a.drinks - b.drinks);
     return (
       <main className="app results-page final-page">
+        <Confetti amount={140} golden />
         <header><p className="eyebrow">The big winner</p><h1>👑 {ranking[0]?.name}</h1><p>Vive la géographie!</p></header>
         <section className="final-podium panel">
           {ranking.map((player, index) => (
@@ -364,6 +367,7 @@ export default function App() {
 
         {phase === 'result' && result && (
           <aside className={`result-card ${result.correct ? 'success' : 'failure'}`} role="dialog" aria-live="assertive">
+            {result.correct && <Confetti amount={currentQuestion.bonus ? 90 : 45} golden={currentQuestion.bonus} />}
             <div className="result-icon">{result.correct ? '✓' : '×'}</div>
             <h2>{result.correct ? 'CORRECT!' : 'DRINK!'}</h2>
             {result.correct ? (
@@ -386,6 +390,7 @@ export default function App() {
               {mode === 'capital' && <><dt>Correct answer</dt><dd>{currentDepartment!.properties.capital}</dd>{result.chosenCapital && <><dt>Your answer</dt><dd>{result.chosenCapital}</dd></>}</>}
               {mode === 'map' && !result.correct && <><dt>Distance</dt><dd>{result.distanceKm} km · {distanceComment(result.distanceKm)}</dd></>}
             </dl>
+            <div className="trivia-card"><b>Le saviez-vous?</b><span>{triviaFor(currentQuestion.departmentCode)}</span></div>
             {result.correct && activeStreakMessage && <div className="streak">{activeStreakMessage}</div>}
             <button className="primary" onClick={continueAfterResult}>Continue →</button>
           </aside>

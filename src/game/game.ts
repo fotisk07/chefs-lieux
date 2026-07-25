@@ -36,12 +36,12 @@ export function normalize(value: string): string {
   return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase().trim();
 }
 
-/**
- * Map answers earn up to 100 points, losing one point per 10 km.
- * This keeps nearby guesses valuable while a guess 1,000+ km away earns zero.
- */
+/** Map scoring: exact 5, within 150 km 3, within 300 km 1, otherwise 0. */
 export function mapPoints(distanceKm: number): number {
-  return Math.max(0, 100 - Math.round(distanceKm / 10));
+  if (distanceKm === 0) return 5;
+  if (distanceKm <= 150) return 3;
+  if (distanceKm <= 300) return 1;
+  return 0;
 }
 
 export function streakMessage(streak: number): string | null {

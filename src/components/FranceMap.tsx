@@ -2,6 +2,24 @@ import { useMemo } from 'react';
 import { geoMercator, geoPath } from 'd3-geo';
 import type { DepartmentCollection } from '../types';
 
+// Projecting the detailed GeoJSON is expensive. Share the generated SVG paths
+// between the question and result maps instead of recalculating them each render.
+const pathCache = new WeakMap<DepartmentCollection, Map<string, string | undefined>>();
+
+function pathsFor(departments: DepartmentCollection): Map<string, string | undefined> {
+  const cached = pathCache.get(departments);
+  if (cached) return cached;
+
+  const projection = geoMercator().fitExtent([[24, 20], [696, 630]], departments);
+  const path = geoPath(projection);
+  const paths = new Map(departments.features.map((feature) => [
+    feature.properties.code,
+    path(feature) ?? undefined,
+  ]));
+  pathCache.set(departments, paths);
+  return paths;
+}
+
 export default function FranceMap({
   departments,
   interactive = false,
@@ -21,10 +39,7 @@ export default function FranceMap({
   compact?: boolean;
   onChoose?: (code: string) => void;
 }) {
-  const path = useMemo(() => {
-    const projection = geoMercator().fitExtent([[24, 20], [696, 630]], departments);
-    return geoPath(projection);
-  }, [departments]);
+  const paths = useMemo(() => pathsFor(departments), [departments]);
   const used = useMemo(() => new Set(usedCodes), [usedCodes]);
 
   return (
@@ -50,7 +65,7 @@ export default function FranceMap({
         return (
           <path
             key={code}
-            d={path(feature) ?? undefined}
+            d={paths.get(code)}
             className={classes}
             role={interactive && !reveal ? 'button' : undefined}
             tabIndex={interactive && !reveal ? 0 : undefined}

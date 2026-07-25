@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { geoCentroid } from 'd3-geo';
 import rawDepartments from './data/departments.json';
+import AnimatedScore from './components/AnimatedScore';
 import CapitalPicker from './components/CapitalPicker';
 import Confetti from './components/Confetti';
 import FranceMap from './components/FranceMap';
@@ -370,10 +371,15 @@ export default function App() {
 
         {phase === 'result' && result && (
           <aside className={`result-card ${result.correct ? 'success' : 'failure'}`} role="dialog" aria-live="assertive">
-            {result.correct && <Confetti amount={currentQuestion.bonus ? 90 : 45} golden={currentQuestion.bonus} />}
+            {result.correct && <Confetti amount={currentQuestion.bonus ? 40 : 24} golden={currentQuestion.bonus} />}
             <div className="result-icon">{result.correct ? '✓' : '×'}</div>
             <h2>{result.correct ? 'CORRECT!' : 'DRINK!'}</h2>
-            <p className="points-earned">+{result.points} point{result.points !== 1 ? 's' : ''}</p>
+            <div className="score-result">
+              <p className="points-earned">Won +{result.points}</p>
+              <p className="total-points">
+                Total: <AnimatedScore from={currentPlayer!.totalScore - result.points} to={currentPlayer!.totalScore} /> pts
+              </p>
+            </div>
             {!result.correct && <p className="drink-message">{drinkMessage}</p>}
             {mode === 'map' && (
               <div className="result-answer-map">

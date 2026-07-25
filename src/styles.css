@@ -65,6 +65,8 @@ input { width: 100%; padding: 12px 14px; border: 1px solid #cfc8b9; border-radiu
 .department.correct { fill: #50a77e; stroke: var(--ink); stroke-width: 2.2; }
 .department.wrong { fill: var(--red); stroke: var(--ink); stroke-width: 2.2; }
 .compact-map .department { stroke-width: 2; }
+.region-borders { pointer-events: none; }
+.region-borders path { fill: none; stroke: var(--ink); stroke-width: 3.4; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
 
 /* Game */
 .game-page { padding-top: 20px; }

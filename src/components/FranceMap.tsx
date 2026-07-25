@@ -1,21 +1,37 @@
 import { useMemo } from 'react';
 import { geoMercator, geoPath } from 'd3-geo';
+import rawRegions from '../data/regions.json';
+import type { FeatureCollection, Geometry } from 'geojson';
 import type { DepartmentCollection } from '../types';
+
+type RegionCollection = FeatureCollection<Geometry, { code: string; nom: string }>;
+type MapPaths = {
+  departments: Map<string, string | undefined>;
+  regions: Array<{ code: string; path: string | undefined }>;
+};
+
+const regions = rawRegions as RegionCollection;
 
 // Projecting the detailed GeoJSON is expensive. Share the generated SVG paths
 // between the question and result maps instead of recalculating them each render.
-const pathCache = new WeakMap<DepartmentCollection, Map<string, string | undefined>>();
+const pathCache = new WeakMap<DepartmentCollection, MapPaths>();
 
-function pathsFor(departments: DepartmentCollection): Map<string, string | undefined> {
+function pathsFor(departments: DepartmentCollection): MapPaths {
   const cached = pathCache.get(departments);
   if (cached) return cached;
 
   const projection = geoMercator().fitExtent([[24, 20], [696, 630]], departments);
   const path = geoPath(projection);
-  const paths = new Map(departments.features.map((feature) => [
-    feature.properties.code,
-    path(feature) ?? undefined,
-  ]));
+  const paths = {
+    departments: new Map(departments.features.map((feature) => [
+      feature.properties.code,
+      path(feature) ?? undefined,
+    ])),
+    regions: regions.features.map((feature) => ({
+      code: feature.properties.code,
+      path: path(feature) ?? undefined,
+    })),
+  };
   pathCache.set(departments, paths);
   return paths;
 }
@@ -65,7 +81,7 @@ export default function FranceMap({
         return (
           <path
             key={code}
-            d={paths.get(code)}
+            d={paths.departments.get(code)}
             className={classes}
             role={interactive && !reveal ? 'button' : undefined}
             tabIndex={interactive && !reveal ? 0 : undefined}
@@ -80,6 +96,9 @@ export default function FranceMap({
           />
         );
       })}
+      <g className="region-borders" aria-hidden="true">
+        {paths.regions.map((region) => <path key={region.code} d={region.path} />)}
+      </g>
     </svg>
   );
 }

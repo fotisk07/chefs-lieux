@@ -20,7 +20,7 @@ function pathsFor(departments: DepartmentCollection): MapPaths {
   const cached = pathCache.get(departments);
   if (cached) return cached;
 
-  const projection = geoMercator().fitExtent([[24, 20], [696, 630]], departments);
+  const projection = geoMercator().fitExtent([[10, 8], [710, 642]], departments);
   const path = geoPath(projection);
   const paths = {
     departments: new Map(departments.features.map((feature) => [

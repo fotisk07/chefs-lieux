@@ -4,7 +4,7 @@ import rawDepartments from './data/departments.json';
 import CapitalPicker from './components/CapitalPicker';
 import Confetti from './components/Confetti';
 import FranceMap from './components/FranceMap';
-import { buildSchedule, normalize, randomDrinkMessage, streakMessage } from './game/game';
+import { buildSchedule, mapPoints, normalize, randomDrinkMessage, streakMessage } from './game/game';
 import { playCorrect, playDrink } from './game/sounds';
 import { triviaFor } from './data/trivia';
 import type { AnswerResult, DepartmentCollection, GameMode, Player, ScheduledQuestion } from './types';
@@ -85,7 +85,10 @@ export default function App() {
 
   function answer(correct: boolean, details: Partial<AnswerResult>) {
     if (!currentQuestion || phase !== 'question') return;
-    const points = correct ? (currentQuestion.bonus ? 2 : 1) : 0;
+    const basePoints = mode === 'map' && details.distanceKm !== undefined
+      ? mapPoints(details.distanceKm)
+      : correct ? 1 : 0;
+    const points = basePoints * (currentQuestion.bonus ? 2 : 1);
     const nextPlayers = players.map((player): Player => {
       if (player.id !== currentQuestion.playerId) return player;
       const streak = correct ? player.streak + 1 : 0;
@@ -370,11 +373,8 @@ export default function App() {
             {result.correct && <Confetti amount={currentQuestion.bonus ? 90 : 45} golden={currentQuestion.bonus} />}
             <div className="result-icon">{result.correct ? '✓' : '×'}</div>
             <h2>{result.correct ? 'CORRECT!' : 'DRINK!'}</h2>
-            {result.correct ? (
-              <p className="points-earned">+{result.points} point{result.points > 1 ? 's' : ''}</p>
-            ) : (
-              <p className="drink-message">{drinkMessage}</p>
-            )}
+            <p className="points-earned">+{result.points} point{result.points !== 1 ? 's' : ''}</p>
+            {!result.correct && <p className="drink-message">{drinkMessage}</p>}
             {mode === 'map' && (
               <div className="result-answer-map">
                 <FranceMap
@@ -388,7 +388,7 @@ export default function App() {
             )}
             <dl>
               {mode === 'capital' && <><dt>Correct answer</dt><dd>{currentDepartment!.properties.capital}</dd>{result.chosenCapital && <><dt>Your answer</dt><dd>{result.chosenCapital}</dd></>}</>}
-              {mode === 'map' && !result.correct && <><dt>Distance</dt><dd>{result.distanceKm} km · {distanceComment(result.distanceKm)}</dd></>}
+              {mode === 'map' && <><dt>Distance</dt><dd>{result.distanceKm} km{!result.correct && ` · ${distanceComment(result.distanceKm)}`}</dd></>}
             </dl>
             <div className="trivia-card"><b>Le saviez-vous?</b><span>{triviaFor(currentQuestion.departmentCode)}</span></div>
             {result.correct && activeStreakMessage && <div className="streak">{activeStreakMessage}</div>}

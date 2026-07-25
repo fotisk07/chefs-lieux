@@ -38,9 +38,10 @@ The deployment URL is shown in the completed workflow and on the repository's Pa
 ## Rules
 
 - Select Chef-lieu or Map mode for the whole game.
-- Each normal correct answer earns 1 point.
-- Each player gets one untimed bonus question per round worth 2 points.
-- A wrong answer means one sip.
+- In Chef-lieu mode, each normal correct answer earns 1 point.
+- In Map mode, every guess earns up to 100 points based on distance: 1 point is lost per 10 km, down to zero at 1,000 km.
+- Each player gets one untimed bonus question per round worth double points.
+- An incorrect answer still means one sip, even when a nearby map guess earns partial points.
 - A unique last-place player at the end of a round takes one extra sip; a tie means no extra penalty.
 - Departments never repeat.
 
